@@ -1,0 +1,15 @@
+
+#if not(MEGA_65) 
+#warn m65.keyboard module should be only used on MEGA_65-compatible targets
+#endif
+
+byte m65_ascii 		@$d610
+byte m65_keymod 	@$d611
+
+const byte KEYMOD_RSHIFT  =1
+const byte KEYMOD_LSHIFT  =2
+const byte KEYMOD_CTRL    =4
+const byte KEYMOD_MEGA    =8
+const byte KEYMOD_ALT     =16
+const byte KEYMOD_NOSCRL  =32
+const byte KEYMOD_CAPSLOCK=64

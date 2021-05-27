@@ -1,6 +1,6 @@
 
 #if not(MEGA_65) 
-#warn m65_vic module should be only used on MEGA_65-compatible targets
+#warn m65.vic module should be only used on MEGA_65-compatible targets
 #endif
 
 byte vic4_key 							@$D02F 

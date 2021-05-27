@@ -1,6 +1,8 @@
 
 import stdio
-import mega.dma 
+import m65.dma 
+import m65.keyboard 
+import m65.vic4 
 
 const byte SCREEN_WIDTH=80
 const word SCREEN_SIZE=(SCREEN_WIDTH*25)
@@ -77,6 +79,7 @@ void main() {
 	//	set border to index 0 
 	vic_border = 0
 
+
 	while true {
 		//	mix asm wherever you like
 		asm 
@@ -92,11 +95,35 @@ vbl:
 			sta $d300
 			cpx #$f0
 			bne vbl
+vbl2:
+			lda $d012 
+			cmp #$f1 
+			bne vbl2
 		}
 
+
+		putHex(320,m65_ascii)
+
+		if ((m65_keymod&KEYMOD_ALT)==0)
+		{
 		//	this just counts up once per frame
-		ticker+=1
+			ticker+=1
+		}
 	}
 }
 
 const array hello_world=["hello mega65, hope you have some fun !  " scr]
+
+const array hexcodes=["0123456789abcdef" scr]
+
+void putHex(word offset,byte value)
+{
+pointer addr 
+
+	addr = SCREEN_BASE.loword
+	addr+=offset
+
+	addr[0] = hexcodes[value>>4]
+	addr[1] = hexcodes[value&$f]
+
+}

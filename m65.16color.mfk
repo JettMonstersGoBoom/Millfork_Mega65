@@ -1,6 +1,6 @@
 
 import stdio
-import mega.dma 
+import m65.dma 
 
 const byte SCREEN_WIDTH=40
 
@@ -70,7 +70,12 @@ vbl:
 			sta $d300
 			cpx #$f0
 			bne vbl
+vbl2:
+			lda $d012 
+			cmp #$f1 
+			bne vbl2
 		}
+
 		ticker+=1
 	}
 }
