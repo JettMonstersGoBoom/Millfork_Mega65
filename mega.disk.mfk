@@ -1,0 +1,32 @@
+
+import stdio
+import mega.dma 
+import cbm_file 
+
+void main() {
+	byte ticker
+	asm {
+		sei
+	}
+	
+	M65_40hz()
+	M65_defaultmem()
+	M65_VIC4Enable()
+
+	//	turn the border white
+	vic_border = 1
+	//	load the file 
+	load_file(last_used_device(), "extra"z)
+	//	call the code
+	//	which should turn the border black 
+	extra()
+	//	then nothing 
+	while true {
+	}
+}
+
+segment(extra)
+void extra() {
+	vic_border = 0
+}
+

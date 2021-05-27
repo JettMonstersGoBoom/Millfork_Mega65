@@ -2,3 +2,5 @@ bin/16color.asm
 bin/dmatest.asm
 bin/dmatest.lbl
 bin/16color.lbl
+bin/disk.asm
+bin/disk.lbl
