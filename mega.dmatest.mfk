@@ -55,6 +55,11 @@ void main() {
 	DMAJob.source=hello_world.addr
 	DMAJob.destination = SCREEN_BASE + 80 
 	M65_dma_kick()
+	//	draw a strip down 
+	DMAJob.dst_skip_lsb = vic4_charstep.lo
+	DMAJob.source=hello_world.addr
+	DMAJob.destination = SCREEN_BASE + 78 
+	M65_dma_kick()
 
 	vic_border = 0
 
