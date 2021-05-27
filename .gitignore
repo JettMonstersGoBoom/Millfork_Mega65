@@ -1,1 +1,4 @@
-bin/*
+bin/16color.asm
+bin/dmatest.asm
+bin/dmatest.lbl
+bin/16color.lbl

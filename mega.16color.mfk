@@ -1,0 +1,83 @@
+
+import stdio
+import mega.dma 
+
+const byte SCREEN_WIDTH=40
+
+const word SCREEN_SIZE=(SCREEN_WIDTH*25)
+const int24 SCREEN_BASE = $0800
+
+void main() {
+	byte ticker
+	asm {
+		sei
+	}
+	M65_40hz()
+	M65_defaultmem()
+	M65_VIC4Enable()
+	M65_disable_rom()
+	M65_dma_prepare()
+
+	//	for 80 col mode
+	vic4_charstep = SCREEN_WIDTH 	
+	vic4_charcount = SCREEN_WIDTH>>1
+	vic4_screen_ptr = SCREEN_BASE
+
+	vic4_ctrlB = 0 
+	vic4_ctrlB &= INT | MONO | H1280 | V400 | BPM | ATTR | FAST
+	vic4_mode = FCLRHI | FCLRLO | CHR16 
+
+	//	set dma skip to 1 byte 
+	//	for a fill 
+	DMAJob.scr_skip_lsb = 1	//	make no difference for FILL
+	DMAJob.dst_bank = $ff	//	for color ram
+	DMAJob.source=colordata.addr
+	DMAJob.destination = $80000
+	DMAJob.size = SCREEN_SIZE
+	DMAJob.type = DMA_COPY
+	M65_dma_kick()
+
+	DMAJob.scr_skip_lsb = 1
+	DMAJob.dst_skip_lsb = 1
+	DMAJob.dst_bank = $00	
+	DMAJob.source=mapdata.addr
+	DMAJob.destination = SCREEN_BASE
+	DMAJob.size = SCREEN_SIZE
+	DMAJob.type = DMA_COPY
+
+	M65_dma_kick()
+
+	for ticker,0,until,255 {
+		vic4_red_channel[ticker] = clutdata[ticker]
+		vic4_green_channel[ticker] = clutdata[ticker+256]
+		vic4_blue_channel[ticker] = clutdata[ticker+512]
+	}
+
+	vic_border = 0
+
+	while true {
+		//	mix asm wherever you like
+		asm 
+		{
+vbl:
+			//	show raster pos as colors
+			ldx $d012
+			clc 
+			txa
+			adc ticker
+			sta $d100 
+			sta $d200 
+			sta $d300
+			cpx #$f0
+			bne vbl
+		}
+		ticker+=1
+	}
+}
+
+
+const array clutdata=file("bin/16color.clut")
+const array colordata=file("bin/16color.atr")
+const array mapdata=file("bin/16color.map")
+const array chrdata @$8000=file("bin/16color.chrs")
+
