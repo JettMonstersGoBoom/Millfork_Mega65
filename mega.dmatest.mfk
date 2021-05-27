@@ -11,6 +11,7 @@ void main() {
 	asm {
 		sei
 	}
+	
 	M65_40hz()
 	M65_defaultmem()
 	M65_VIC4Enable()
@@ -34,33 +35,46 @@ void main() {
 
 	//	clear screen 
 	DMAJob.dst_bank = $0	
+	//	using the space char $20 
 	DMAJob.source.lo=$20
+	//	to the screen
 	DMAJob.destination = SCREEN_BASE
+	//	how big 
 	DMAJob.size = SCREEN_SIZE
+	//	what we're doing 
 	DMAJob.type = DMA_FILL
+	//	kick the DMA off 
 	M65_dma_kick()
 
+	//	just a straight horizontal copy
 	DMAJob.scr_skip_lsb = 1
 	DMAJob.dst_skip_lsb = 1
 	DMAJob.dst_bank = $00	
 	DMAJob.source=hello_world.addr
 	DMAJob.destination = SCREEN_BASE
 	DMAJob.size = hello_world.length
+	//	COPY 
 	DMAJob.type = DMA_COPY
-
+	//	kick the DMA off 
 	M65_dma_kick()
 
 	//	skip of 2 on destination 
 	DMAJob.dst_skip_lsb = 2
+	//	so H E L L O instead of HELLO
 	DMAJob.source=hello_world.addr
 	DMAJob.destination = SCREEN_BASE + 80 
+	//	kick the DMA off 
 	M65_dma_kick()
 	//	draw a strip down 
 	DMAJob.dst_skip_lsb = vic4_charstep.lo
+	//	H
+	//	E 
+	//	L .. etc
 	DMAJob.source=hello_world.addr
 	DMAJob.destination = SCREEN_BASE + 78 
 	M65_dma_kick()
 
+	//	set border to index 0 
 	vic_border = 0
 
 	while true {
@@ -79,6 +93,8 @@ vbl:
 			cpx #$f0
 			bne vbl
 		}
+
+		//	this just counts up once per frame
 		ticker+=1
 	}
 }
