@@ -1,0 +1,71 @@
+
+#if not(ARCH_6809)
+#warn m6809_math module should be used only on 6809-like targets
+#endif
+
+noinline asm word __mul_u16u16u16(word register(x) x, word register(d) d) {
+    pshs d,x
+    exg d,x
+    lda ,s
+    mul
+    tfr d,x
+    ldd 1,s
+    mul
+    abx
+    tfr x,d
+    tfr b,a
+    ldb #0
+    tfr d,x
+    puls d
+    lda 1,s
+    mul
+    leax d,x
+    tfr x,d
+    leas 2,s
+    rts
+}
+
+// returns p/q: quotient in A, remainder in B
+noinline asm word __divmod_u8u8u8u8(word register(a) p, word register(b) q) {
+    pshs b,cc
+    ldb #8
+    stb ,-s
+    clrb
+.__divmod_u8u8u8u8_loop:
+    asla
+    rolb
+    cmpb 2,s
+    blo .__divmod_u8u8u8u8_skip
+    subb 2,s
+    inca
+.__divmod_u8u8u8u8_skip:
+    dec ,s
+    bne .__divmod_u8u8u8u8_loop
+    stb 2,s
+    leas 1,s
+    puls pc,b,cc
+}
+
+// returns p/q: quotient in X, remainder in D
+noinline asm word __divmod_u16u16u16u16(word register(x) p, word register(d) q) {
+    pshs x,d,cc
+    ldb #16
+    pshs b
+    clrb
+    clra
+.__divmod_u16u16u16u16_loop:
+    asl 5,s
+    rol 4,s
+    rolb
+    rola
+    cmpd 2,s
+    blo .__divmod_u16u16u16u16_skip
+    subd 2,s
+    inc 5,s
+.__divmod_u16u16u16u16_skip:
+    dec ,s
+    bne .__divmod_u16u16u16u16_loop
+    std 2,s
+    leas 1,s
+    puls pc,x,d,cc
+}

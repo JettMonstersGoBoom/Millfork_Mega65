@@ -1,0 +1,72 @@
+const byte DMA_COPY = %00000000 
+const byte DMA_FILL = %00000011 
+
+volatile byte M64_dma_lsb	@$D705
+volatile byte M64_dma_msb @$D701
+volatile byte M64_dma_bank  @$D702
+
+struct _DMA_JOB_T_ {
+	byte job_style 
+
+	byte src_ctrl 
+	byte src_bank 
+
+	byte dst_ctrl 
+	byte dst_bank 
+
+	byte src_skip_ctrl_a 
+	byte scr_skip_lsb 
+	byte src_skip_ctrl_b 
+	byte scr_skip_msb 
+
+	byte dst_skip_ctrl_a 
+	byte dst_skip_lsb 
+	byte dst_skip_ctrl_b 
+	byte dst_skip_msb 
+
+	byte trn_ctrl 
+	byte transparency_type
+	byte trn_clr_ctrl 
+	byte transparency_color
+	byte job_count 
+
+	byte type 
+	word size 
+	int24 source 
+	int24 destination 
+	word padd
+}
+
+_DMA_JOB_T_ DMAJob 
+
+void M65_dma_prepare()
+{
+	DMAJob.job_style = 0x0a 
+	DMAJob.src_ctrl = $80 
+	DMAJob.dst_ctrl = $81 
+	DMAJob.src_skip_ctrl_b = $82
+	DMAJob.src_skip_ctrl_a = $83 
+	DMAJob.dst_skip_ctrl_b = $84
+	DMAJob.dst_skip_ctrl_a = $85 
+	DMAJob.trn_ctrl = $86
+	DMAJob.trn_clr_ctrl = $87
+	DMAJob.scr_skip_lsb = 1
+	DMAJob.dst_skip_lsb = 1
+	DMAJob.job_count = 0  
+	DMAJob.src_bank = 0 
+	DMAJob.dst_bank = 0
+	DMAJob.scr_skip_msb = 0 
+	DMAJob.dst_skip_msb = 0 	
+	DMAJob.transparency_type = 0 
+	DMAJob.transparency_color = 0
+}
+
+macro asm void M65_dma_kick()
+{
+	lda #$00 
+	sta M64_dma_bank
+	lda #>DMAJob.addr
+	sta M64_dma_msb
+	lda #<DMAJob.addr 
+	sta M64_dma_lsb
+}

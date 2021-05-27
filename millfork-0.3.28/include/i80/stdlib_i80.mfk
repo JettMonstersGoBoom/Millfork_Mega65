@@ -1,0 +1,60 @@
+// target-independent things
+
+#if not(ARCH_I80)
+#warn stdlib_i80 module should be only used on Intel 8080-like targets
+#endif
+
+#pragma zilog_syntax
+
+import i80/i80_math
+
+macro asm void poke(word const addr, byte register(a) value) {
+    ! LD (addr), A
+}
+
+macro asm byte peek(word const addr) {
+    ! LD A, (addr)
+}
+
+macro asm void disable_irq() {
+    DI
+}
+
+macro asm void enable_irq() {
+    EI
+}
+
+asm byte hi_nibble_to_hex(byte register(a) value) {
+#if CPUFEATURE_GAMEBOY
+    SWAP A
+#else
+    RRA
+    RRA
+    RRA
+    RRA
+#endif
+    ? JP lo_nibble_to_hex
+}
+
+asm byte lo_nibble_to_hex(byte register(a) value) {
+    AND $F
+    ADD A,$30
+    CP $3A
+#if CPUFEATURE_GAMEBOY | CPUFEATURE_Z80
+    JR C,_lo_nibble_to_hex_lbl
+#else
+    JP C,_lo_nibble_to_hex_lbl
+#endif
+    ADD A,$7
+_lo_nibble_to_hex_lbl:
+    RET
+}
+
+macro asm void panic() {
+    ? CALL _panic
+}
+
+noinline asm word call(word de) {
+    PUSH DE
+    RET
+}

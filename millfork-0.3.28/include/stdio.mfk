@@ -1,0 +1,88 @@
+// target-independent standard I/O routines
+
+import string
+#if ZX_SPECTRUM
+import stdio_zxspectrum
+#endif
+
+
+#if not(ZX_SPECTRUM)
+
+void putstr(pointer str, byte len) {
+    byte index
+    index = 0
+    while (index != len) {
+        putchar(str[index])
+        index += 1
+    }
+}
+#endif
+
+#if NEC_PC_88
+asm void putstrz(pointer hl) @$5550 extern
+#endif
+
+#if not(ZX_SPECTRUM) && not(NEC_PC_88)
+void putstrz(pointer str) {
+    byte index
+    index = 0
+    while str[index] != nullchar {
+        putchar(str[index])
+        index += 1
+    }
+}
+
+#endif
+
+void putword(word w) {
+    byte digits
+    byte lastdigit
+    digits = 0
+    word mask
+    for mask:[40000,4000,400,40,4] {
+        lastdigit = 0
+        while w >= mask {
+            w -= mask
+            lastdigit += 4
+        }
+        mask >>= 2
+        while w >= mask {
+            w -= mask
+            lastdigit += 1
+        }
+        if digits != 0 || lastdigit != 0 {
+            putchar('0' + lastdigit)
+            digits += 1
+        }
+    }
+    if digits == 0 {
+        putchar('0')
+    }
+}
+
+void putsigned16(signed16 x) {
+    if x < 0 {
+        putchar('-')
+        x = 0000-x
+    }
+    putword(x)
+}
+
+#if CBM_PET
+inline asm void ensure_mixedcase() {
+    ? lda #14
+    ! sta 59468
+    ? rts
+}
+#elseif CBM
+inline void ensure_mixedcase() {
+    putchar(14)
+}
+#else
+inline void ensure_mixedcase() {
+}
+#endif
+
+void putpstr(pointer pstr) {
+    putstr(pstr + 1, pstr[0])
+}

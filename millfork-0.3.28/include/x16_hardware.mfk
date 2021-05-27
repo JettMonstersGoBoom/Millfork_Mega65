@@ -1,0 +1,18 @@
+
+#if VERA_VERSION < 9
+import x16/vera_7_or_8
+#elseif VERA_VERSION == 9
+import x16/vera_9
+#else
+#error Unsupported VERA_VERSION
+#endif
+
+inline asm void set_ram_bank(byte register(a) bank) {
+    ! STA $9F61
+    ? RTS
+}
+
+inline asm void set_rom_bank(byte register(a) bank) {
+    ! STA $9F60
+    ? RTS
+}

@@ -1,0 +1,28 @@
+
+#if not(ZX_SPECTRUM)
+#warn stdio_zxspectrum module should be only used on ZX Spectrum-compatible targets
+#endif
+
+#pragma zilog_syntax
+
+import stdio
+
+void putstr(pointer str, byte len) {
+    asm {
+        ? LD DE,(str)
+        ? LD A,(len)
+        ? LD B, 0
+        ? LD C, A
+        CALL 8252
+    }
+}
+
+void putstrz(pointer str) {
+    word length
+    length = strzlen(str)
+    asm {
+        ? LD DE,(str)
+        ? LD BC,(length)
+        CALL 8252
+    }
+}

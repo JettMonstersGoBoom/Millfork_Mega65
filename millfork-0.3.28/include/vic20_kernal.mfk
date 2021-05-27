@@ -1,0 +1,20 @@
+// Routines from C16 and Plus/4 KERNAL ROM
+
+#if not(CBM_VIC)
+#warn vic20_kernal module should be only used on VIC-20 targets
+#endif
+
+// CHROUT. Write byte to default output. (If not screen, must call OPEN and CHKOUT beforehands.)
+// Input: A = Byte to write.
+asm void chrout(byte register(a) char) !preserves_a !preserves_x !preserves_y @$FFD2 extern
+
+asm void putchar(byte register(a) char) {
+    JSR chrout
+    LDA #0
+    STA $D4
+    ? RTS
+}
+
+inline void new_line() {
+    putchar(13)
+}

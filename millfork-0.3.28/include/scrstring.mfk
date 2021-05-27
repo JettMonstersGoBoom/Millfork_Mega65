@@ -1,0 +1,69 @@
+import string
+
+#if NULLCHAR_SAME
+alias scrstrzlen = strzlen
+alias scrstrzcmp = strzcmp
+alias scrstrzcopy = strzcopy
+alias scrstrzpaste = strzpaste
+alias scrstrzappendchar = strzappendchar
+alias scrstrzappend = strzappend
+
+
+#else
+
+#if ARCH_I80
+import internal/scrstring_fastpointers
+#else
+import internal/scrstring_fastindices
+#endif
+
+void scrstrzappend(pointer buffer, pointer str) {
+    scrstrzcopy(buffer + scrstrzlen(buffer), str)
+}
+void scrstrzappendchar(pointer buffer, byte char) {
+   buffer += scrstrzlen(buffer)
+   buffer[0] = char
+   buffer[1] = nullchar_scr
+}
+
+#endif
+
+#if DECIMALS_SAME
+
+alias scrstrz2word = strz2word
+
+#else
+
+word scrstrz2word(pointer str) {
+    byte i
+    byte char
+    word next
+    word result
+    result = 0
+    i = 0
+    errno = err_ok
+    while true {
+        char = str[i]
+        if char == nullchar_scr {
+            if i == 0 {
+                errno = err_numberformat
+            }
+            return result
+        }
+        if '0'scr <= char <= '0'scr + 9 {
+            next = result * 10
+            next += char - '0'scr
+            if next < result {
+                errno = err_range
+            }
+            result = next
+        } else {
+            errno = err_numberformat
+            return result
+        }
+        i += 1
+    }
+}
+
+
+#endif

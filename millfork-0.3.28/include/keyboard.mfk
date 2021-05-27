@@ -1,0 +1,168 @@
+#if ATARI_8
+const byte KEY_ENTER = 155
+#else
+const byte KEY_ENTER = 13
+#endif
+
+
+#if CBM_64
+noinline asm byte readkey() {
+    LDA #0
+    STA $C6
+__read_key__start:
+    LDA $C6
+    BEQ __read_key__start
+    JMP $E5B4
+}
+#define OK = 1
+#endif
+
+
+#if CBM_128
+noinline asm byte readkey() {
+    LDA #0
+    STA $D0
+__read_key__start:
+    LDA $D0
+    BEQ __read_key__start
+    LDX #0
+    JMP $C244
+}
+#define OK = 1
+#endif
+
+
+#if CBM_264
+noinline asm byte readkey() {
+    LDA #0
+    STA $EF
+__read_key__start:
+    LDA $EF
+    BEQ __read_key__start
+    LDX #0
+    JMP $D8D5
+}
+#define OK = 1
+#endif
+
+
+#if CBM_VIC
+noinline asm byte readkey() {
+    LDA #0
+    STA $C6
+__read_key__start:
+    LDA $C6
+    BEQ __read_key__start
+    JMP $E5CF
+}
+#define OK = 1
+#endif
+
+
+#if CBM_PET
+
+#if not(PET2001_SUPPORT) && not(PET3000_SUPPORT) && not(PET4000_SUPPORT)
+#error At least one of PET2000_SUPPORT, PET3000_SUPPORT, PET4000_SUPPORT has to be defined
+#endif
+
+noinline asm byte readkey() {
+#if PET2001_SUPPORT && (PET3000_SUPPORT || PET4000_SUPPORT)
+    JSR is_pet2000
+    BNE __read_key__start_new
+#endif
+
+#if PET2001_SUPPORT
+    // ROM 1.0:
+    LDA #0
+    STA $20D
+__read_key__start1:
+    LDA $20D
+    BEQ __read_key__start1
+    LDA $20F
+    RTS
+#endif
+
+#if PET3000_SUPPORT || PET4000_SUPPORT
+    // ROM 2.0 and above:
+__read_key__start_new:
+    LDA #0
+    STA $9E
+__read_key__start2:
+    LDA $9E
+    BEQ __read_key__start2
+    LDA $026F
+    RTS
+#endif
+}
+#define OK = 1
+#endif
+
+
+#if ATARI_8
+noinline asm byte readkey() {
+    lda #$C
+    sta $2A
+    lda $E425
+    pha
+    lda $E424
+    pha
+    rts
+}
+#define OK = 1
+#endif
+
+
+#if APPLE_2
+asm byte readkey() @$FD0C extern
+#define OK = 1
+#endif
+
+
+#if NEC_PC_88
+asm byte readkey() @$3583 extern
+#define OK = 1
+#endif
+
+
+#if AMSTRAD_CPC
+asm byte readkey() @$BB06 extern
+#define OK = 1
+#endif
+
+
+#if ZX_SPECTRUM
+#pragma zilog_syntax
+asm byte readkey() {
+    ld hl,23560
+    ld (hl),0
+__readkey__start:
+    ld a,(hl)
+    or a
+    jr z,__readkey__start
+    ? ret
+}
+#define OK = 1
+#endif
+
+#if COCO
+import coco/keyboard
+#define OK = 1
+#endif
+
+#if TRS80
+import trs80/keyboard
+#define OK = 1
+#endif
+
+#if Z1013
+import z1013/keyboard
+#define OK = 1
+#endif
+
+#if not(OK)
+    #if KEYBOARD
+        #warn keyboard module is not yet supported
+    #else
+        #warn keyboard module is not supported on targets without keyboard
+    #endif
+#endif

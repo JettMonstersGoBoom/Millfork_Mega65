@@ -1,0 +1,250 @@
+#if ENCODING_SAME
+
+#if ARCH_6502
+inline asm byte __byte_identity(byte register(a) value) { ? rts }
+inline asm void __pointer_to_void(pointer register(ax) value) { ? rts }
+#elseif ARCH_I80
+#pragma zilog_syntax
+inline asm byte __byte_identity(byte register(a) value) { ? ret }
+inline asm void __pointer_to_void(pointer register(hl) value) { ? ret }
+#elseif ARCH_M6809
+inline asm byte __byte_identity(byte register(b) value) { ? rts }
+inline asm void __pointer_to_void(pointer register(d) value) { ? rts }
+#else
+inline byte __byte_identity(byte value) = a
+inline void __pointer_to_void(pointer value) { }
+#endif
+
+alias from_screencode = __byte_identity
+alias to_screencode = __byte_identity
+alias strz_from_screencode = __pointer_to_void
+alias strz_to_screencode = __pointer_to_void
+alias pstr_from_screencode = __pointer_to_void
+alias pstr_to_screencode = __pointer_to_void
+
+#elseif ENCCONV_SUPPORTED
+
+alias from_screencode = __from_screencode
+alias to_screencode = __to_screencode
+
+
+#if ARCH_6502
+void strz_from_screencode(pointer p) {
+    asm {
+        ? LDY #0
+        __strz_from_screencode__loop:
+        LDA (p),Y
+        ? CMP #nullchar_scr
+        ? BEQ __strz_from_screencode__end
+        ? JSR from_screencode
+        ? STA (p),Y
+        ? INY
+        ? JMP __strz_from_screencode__loop
+        __strz_from_screencode__end:
+        ? LDA #nullchar
+        ? STA (p),Y
+    }
+}
+void strz_to_screencode(pointer p) {
+    asm {
+        ? LDY #0
+        __strz_to_screencode__loop:
+        LDA (p),Y
+        ? CMP #nullchar
+        ? BEQ __strz_to_screencode__end
+        ? JSR to_screencode
+        ? STA (p),Y
+        ? INY
+        ? JMP __strz_to_screencode__loop
+        __strz_to_screencode__end:
+        ? LDA #nullchar_scr
+        ? STA (p),Y
+    }
+}
+#else
+void strz_from_screencode(pointer p) {
+    while true {
+        if p[0] == nullchar_scr {
+            p[0] = nullchar
+            return
+        }
+        p[0] = from_screencode(p[0])
+        p += 1
+    }
+}
+void strz_to_screencode(pointer p) {
+    while true {
+        if p[0] == nullchar {
+            p[0] = nullchar_scr
+            return
+        }
+        p[0] = to_screencode(p[0])
+        p += 1
+    }
+}
+
+#endif
+
+void pstr_from_screencode(pointer p) {
+    byte i, l
+    l = p[0]
+    for i,1,parallelto,l {
+        p[i] = from_screencode(p[i])
+    }
+}
+void pstr_to_screencode(pointer p) {
+    byte i, l
+    l = p[0]
+    for i,1,parallelto,l {
+        p[i] = to_screencode(p[i])
+    }
+}
+
+#endif // ENCODING_SAME/ENCCONV_SUPPORTED
+
+
+// conversions for particular encoding pairs:
+
+#if ARCH_6502
+
+asm byte petscii_to_petscr(byte register(a) char) {
+    cmp #$20
+    bcc __petscii_to_petscr_ddRev
+    cmp #$60
+    bcc __petscii_to_petscr_dd1
+    cmp #$80
+    bcc __petscii_to_petscr_dd2
+    cmp #$a0
+    bcc __petscii_to_petscr_dd3
+    cmp #$c0
+    bcc __petscii_to_petscr_dd4
+    cmp #$ff
+    bcc __petscii_to_petscr_ddRev
+    lda #$5e
+    rts
+__petscii_to_petscr_dd2:
+    and #$5f
+    rts
+__petscii_to_petscr_dd3:
+    ora #$40
+    rts
+__petscii_to_petscr_dd4:
+    eor #$c0
+    rts
+__petscii_to_petscr_dd1:
+    and #$3f
+    rts
+__petscii_to_petscr_ddRev:
+    eor #$80
+    rts
+}
+
+asm byte petscr_to_petscii(byte register(a) char) {
+    cmp #$20
+    bcs __petscr_to_petscii_40
+    ora #$40
+    rts
+__petscr_to_petscii_40:
+    cmp #$40
+    bcs __petscr_to_petscii_60
+    rts
+__petscr_to_petscii_60:
+    cmp #$60
+    bcs __petscr_to_petscii_80
+    eor #$80
+    rts
+__petscr_to_petscii_80:
+    cmp #$80
+    bcs __petscr_to_petscii_a0
+    eor #$c0
+    rts
+__petscr_to_petscii_a0:
+    cmp #$a0
+    bcs __petscr_to_petscii_c0
+    eor #$80
+    rts
+__petscr_to_petscii_c0:
+    eor #$40
+    rts
+}
+
+asm byte atascii_to_atasciiscr(byte register(a) char) {
+    and #$7f
+    cmp #$20
+    bcs __atascii_to_atasciiscr_60
+    ora #$40
+    rts
+__atascii_to_atasciiscr_60:
+    cmp #$60
+    bcs __atascii_to_atasciiscr_end
+    sec
+    sbc #$20
+__atascii_to_atasciiscr_end:
+    rts
+}
+
+
+asm byte atasciiscr_to_atascii(byte register(a) char) {
+    and #$7f
+    cmp #$40
+    bcs __atascii_to_atasciiscr_60
+    clc
+    adc #$20
+    rts
+__atascii_to_atasciiscr_60:
+    cmp #$60
+    bcs __atascii_to_atasciiscr_end
+    and #$1f
+__atascii_to_atasciiscr_end:
+    rts
+}
+
+#endif
+
+#if ARCH_6809
+
+asm byte coco_to_cocoscr(byte register(b) char) {
+    cmpb #$20
+    bcc __coco_to_cocoscr_40
+    eorb #$20
+    rts
+__coco_to_cocoscr_40:
+    cmpb #$40
+    bcc __coco_to_cocoscr_60
+    eorb #$40
+    rts
+__coco_to_cocoscr_60:
+    cmpb #$60
+    bcc __coco_to_cocoscr_80
+    rts
+__coco_to_cocoscr_80:
+    cmpb #$80
+    bcc __coco_to_cocoscr_end
+    eorb #$60
+__coco_to_cocoscr_end:
+    rts
+}
+
+asm byte cocoscr_to_coco(byte register(b) char) {
+    cmpb #$20
+    bcc __cocoscr_to_coco_40
+    eorb #$60
+    rts
+__cocoscr_to_coco_40:
+    cmpb #$40
+    bcc __cocoscr_to_coco_60
+    eorb #$20
+    rts
+__cocoscr_to_coco_60:
+    cmpb #$60
+    bcc __cocoscr_to_coco_80
+    rts
+__cocoscr_to_coco_80:
+    cmpb #$80
+    bcc __coco_to_cocoscr_end
+    eorb #$40
+__cocoscr_to_coco_end:
+    rts
+}
+
+#endif

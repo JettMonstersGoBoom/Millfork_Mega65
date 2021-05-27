@@ -1,0 +1,44 @@
+// Hardware addresses for C64
+
+#if not(CBM_64) && not(CBM_64_COMPAT)
+#warn c64_cia module should be only used on C64-compatible targets
+#endif
+
+//   CIA1
+volatile byte cia1_pra       @$DC00
+volatile byte cia1_prb       @$DC01
+byte cia1_ddra      @$DC02
+byte cia1_ddrb      @$DC03
+volatile byte cia2_pra       @$DD00
+volatile byte cia2_prb       @$DD01
+byte cia2_ddra      @$DD02
+byte cia2_ddrb      @$DD03
+
+macro asm void cia_disable_irq() {
+    ? LDA #$7f
+    ! STA $dc0d
+    ! STA $dd0d
+    ! LDA $dc0d
+    ! LDA $dd0d
+}
+
+
+macro void vic_bank_0000() {
+    cia2_ddra = 3
+    cia2_pra = 3
+}
+
+macro void vic_bank_4000() {
+    cia2_ddra = 3
+    cia2_pra = 2
+}
+
+macro void vic_bank_8000() {
+    cia2_ddra = 3
+    cia2_pra = 1
+}
+
+macro void vic_bank_C000() {
+    cia2_ddra = 3
+    cia2_pra = 0
+}

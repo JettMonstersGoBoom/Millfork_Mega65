@@ -1,0 +1,47 @@
+import err
+
+#if ARCH_I80
+import internal/string_fastpointers
+#else
+import internal/string_fastindices
+#endif
+
+void strzappend(pointer buffer, pointer str) {
+    strzcopy(buffer + strzlen(buffer), str)
+}
+void strzappendchar(pointer buffer, byte char) {
+   buffer += strzlen(buffer)
+   buffer[0] = char
+   buffer[1] = nullchar
+}
+
+word strz2word(pointer str) {
+    byte i
+    byte char
+    word next
+    word result
+    result = 0
+    i = 0
+    errno = err_ok
+    while true {
+        char = str[i]
+        if char == nullchar {
+            if i == 0 {
+                errno = err_numberformat
+            }
+            return result
+        }
+        if '0' <= char <= '0' + 9 {
+            next = result * 10
+            next += char - '0'
+            if next < result {
+                errno = err_range
+            }
+            result = next
+        } else {
+            errno = err_numberformat
+            return result
+        }
+        i += 1
+    }
+}

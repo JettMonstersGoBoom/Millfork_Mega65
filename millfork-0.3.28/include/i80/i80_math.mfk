@@ -1,0 +1,332 @@
+
+#if not(ARCH_I80)
+#warn i80_math module should be used only on 8080-like targets
+#endif
+
+#pragma zilog_syntax
+#if CPUFEATURE_Z80_NEXT
+inline asm byte __mul_u8u8u8() {
+    ? LD E,A
+    ? MUL
+    ? LD A, E
+    ? RET
+}
+#elseif CPUFEATURE_Z80 || CPUFEATURE_GAMEBOY
+//A = A * D
+noinline asm byte __mul_u8u8u8() {
+    ? LD E,A
+    ? LD A, 0
+    ? JR __mul_u8u8u8_start
+    __mul_u8u8u8_add:
+    ? ADD A,E
+    __mul_u8u8u8_loop:
+    ? SLA E
+    __mul_u8u8u8_start:
+    ? SRL D
+    ? JR C, __mul_u8u8u8_add
+    ? JR NZ, __mul_u8u8u8_loop
+    ? RET
+}
+
+#else
+
+noinline asm byte __mul_u8u8u8() {
+    ? LD E,A
+    ? LD C, 0
+    ? JP __mul_u8u8u8_start
+    __mul_u8u8u8_add:
+    ? LD A,C
+    ? ADD A,E
+    ? LD C,A
+    __mul_u8u8u8_loop:
+    ? LD A,E
+    ? ADD A,A
+    ? LD E,A
+    __mul_u8u8u8_start:
+    ? OR A
+    ? LD A,D
+    ? RRA
+    ? LD D,A
+    ? JP C, __mul_u8u8u8_add
+    ? OR A
+    ? JP NZ, __mul_u8u8u8_loop
+    ? LD A,C
+    ? RET
+}
+
+#endif
+
+noinline asm void __divmod_u16u8u16u8() {
+    ? XOR A
+    ? LD B, 16
+__divmod_u16u8u16u8_loop:
+    ? ADD HL,HL
+    ? RLA
+#if CPUFEATURE_Z80 || CPUFEATURE_GAMEBOY
+    ? JR C, __divmod_u16u8u16u8_overflow
+#else
+    ? JP C, __divmod_u16u8u16u8_overflow
+#endif
+    ? CP D
+#if CPUFEATURE_Z80 || CPUFEATURE_GAMEBOY
+    ? JR C, __divmod_u16u8u16u8_skip
+#else
+    ? JP C, __divmod_u16u8u16u8_skip
+#endif
+__divmod_u16u8u16u8_overflow:
+    ? SUB D
+    ? INC L
+__divmod_u16u8u16u8_skip:
+#if CPUFEATURE_Z80
+    ? DJNZ __divmod_u16u8u16u8_loop
+#elseif CPUFEATURE_GAMEBOY
+    ? DEC B
+    ? JR NZ, __divmod_u16u8u16u8_loop
+#else
+    ? DEC B
+    ? JP NZ, __divmod_u16u8u16u8_loop
+#endif
+    ? RET
+}
+
+noinline asm word __mul_u16u8u16() {
+    ? LD HL,0
+    ? LD B,8
+__mul_u16u8u16_loop:
+    ? ADD HL,HL
+    ? ADC A,A
+#if CPUFEATURE_Z80 || CPUFEATURE_GAMEBOY
+    ? JR NC,__mul_u16u8u16_skip
+#else
+    ? JP NC,__mul_u16u8u16_skip
+#endif
+    ? ADD HL,DE
+__mul_u16u8u16_skip:
+#if CPUFEATURE_Z80
+    ? DJNZ __mul_u16u8u16_loop
+#elseif CPUFEATURE_GAMEBOY
+    ? DEC B
+    ? JR NZ,__mul_u16u8u16_loop
+#else
+    ? DEC B
+    ? JP NZ,__mul_u16u8u16_loop
+#endif
+    ? RET
+}
+
+#if CPUFEATURE_Z80 || CPUFEATURE_GAMEBOY
+noinline asm word __mul_u16u16u16() {
+    LD HL,0
+    LD A,16
+__mul_u16u16u16_loop:
+    ADD HL,HL
+    RL E
+    RL D
+    JR NC,__mul_u16u16u16_skip
+    ADD HL,BC
+__mul_u16u16u16_skip:
+    DEC A
+    JR NZ,__mul_u16u16u16_loop
+    RET
+}
+#else
+noinline asm word __mul_u16u16u16() {
+    ld hl,0
+    CALL __mul_u16u16u16_q
+    CALL __mul_u16u16u16_q
+    CALL __mul_u16u16u16_q
+    JP __mul_u16u16u16_q
+}
+noinline asm word __mul_u16u16u16_q(word hl) {
+    CALL __mul_u16u16u16_s
+    CALL __mul_u16u16u16_s
+    CALL __mul_u16u16u16_s
+    JP __mul_u16u16u16_s
+}
+noinline asm word __mul_u16u16u16_s(word hl) {
+    ADD HL,HL
+    LD A,E
+    ADD A,E
+    LD E,A
+    LD A,D
+    ADC A,D
+    LD D,A
+    RET NC
+    ADD HL,BC
+    RET
+}
+#endif
+
+#if CPUFEATURE_Z80
+
+// HL/DE = DE rem HL
+noinline asm word __divmod_u16u16u16u16() {
+    LD A,H
+    LD C,L
+    LD HL,0
+    LD B,16
+__divmod_u16u16u16u16_loop:
+#if CPUFEATURE_Z80_ILLEGALS
+    SLL C
+#else
+    SCF
+    RL C
+#endif
+    RLA
+    ADC HL,HL
+    SBC HL,DE
+    JR NC,__divmod_u16u16u16u16_skip
+    ADD HL,DE
+    DEC C
+__divmod_u16u16u16u16_skip:
+    DJNZ __divmod_u16u16u16u16_loop
+    LD D,A
+    LD E,C
+    RET
+}
+
+#elseif CPUFEATURE_8080
+
+// HL/DE = DE rem HL
+// ABI could be changed, but the optimizer relies on it
+asm word __divmod_u16u16u16u16() {
+    ? LD B,D
+    ? LD C,E
+    ? LD DE,0
+#if OPTIMIZE_FOR_SPEED
+    ? CALL __divmod_u16u16u16u16_u
+    ? CALL __divmod_u16u16u16u16_u
+    ? CALL __divmod_u16u16u16u16_u
+    ? CALL __divmod_u16u16u16u16_u
+
+    ? CALL __divmod_u16u16u16u16_u
+    ? CALL __divmod_u16u16u16u16_u
+    ? CALL __divmod_u16u16u16u16_u
+    ? CALL __divmod_u16u16u16u16_u
+
+    ? CALL __divmod_u16u16u16u16_u
+    ? CALL __divmod_u16u16u16u16_u
+    ? CALL __divmod_u16u16u16u16_u
+    ? CALL __divmod_u16u16u16u16_u
+
+    ? CALL __divmod_u16u16u16u16_u
+    ? CALL __divmod_u16u16u16u16_u
+    ? CALL __divmod_u16u16u16u16_u
+    ? CALL __divmod_u16u16u16u16_u
+#else
+    ? CALL __divmod_u16u16u16u16_q
+    ? CALL __divmod_u16u16u16u16_q
+    ? CALL __divmod_u16u16u16u16_q
+    ? CALL __divmod_u16u16u16u16_q
+#endif
+    ? EX DE,HL
+    ? RET
+}
+
+#if not(OPTIMIZE_FOR_SPEED)
+asm void __divmod_u16u16u16u16_q(){
+    ? CALL __divmod_u16u16u16u16_u
+    ? CALL __divmod_u16u16u16u16_u
+    ? CALL __divmod_u16u16u16u16_u
+    ? JP __divmod_u16u16u16u16_u
+}
+#endif
+
+noinline asm void __divmod_u16u16u16u16_u(){
+    ADD HL,HL
+    INC L
+
+    LD A,E
+    RLA
+    LD E,A
+    LD A,D
+    RLA
+    LD D,A
+
+    LD A,E
+    SUB C
+    LD E,A
+    LD A,D
+    SBC A,B
+    LD D,A
+    RET NC
+
+    EX DE,HL
+    ADD HL, BC
+    EX DE,HL
+    DEC L
+    RET
+}
+
+#elseif CPUFEATURE_GAMEBOY
+
+// HL/DE = DE rem HL
+// ABI could be changed, but the optimizer relies on it
+asm word __divmod_u16u16u16u16() {
+    ? LD B,D
+    ? LD C,E
+    ? LD D,H
+    ? LD E,L
+    ? LD HL,0
+#if OPTIMIZE_FOR_SPEED
+    ? CALL __divmod_u16u16u16u16_u
+    ? CALL __divmod_u16u16u16u16_u
+    ? CALL __divmod_u16u16u16u16_u
+    ? CALL __divmod_u16u16u16u16_u
+
+    ? CALL __divmod_u16u16u16u16_u
+    ? CALL __divmod_u16u16u16u16_u
+    ? CALL __divmod_u16u16u16u16_u
+    ? CALL __divmod_u16u16u16u16_u
+
+    ? CALL __divmod_u16u16u16u16_u
+    ? CALL __divmod_u16u16u16u16_u
+    ? CALL __divmod_u16u16u16u16_u
+    ? CALL __divmod_u16u16u16u16_u
+
+    ? CALL __divmod_u16u16u16u16_u
+    ? CALL __divmod_u16u16u16u16_u
+    ? CALL __divmod_u16u16u16u16_u
+    ? JP __divmod_u16u16u16u16_u
+#else
+    ? CALL __divmod_u16u16u16u16_q
+    ? CALL __divmod_u16u16u16u16_q
+    ? CALL __divmod_u16u16u16u16_q
+    ? JP __divmod_u16u16u16u16_q
+#endif
+}
+
+#if not(OPTIMIZE_FOR_SPEED)
+asm void __divmod_u16u16u16u16_q(){
+    ? CALL __divmod_u16u16u16u16_u
+    ? CALL __divmod_u16u16u16u16_u
+    ? CALL __divmod_u16u16u16u16_u
+    ? JP __divmod_u16u16u16u16_u
+}
+#endif
+
+noinline asm void __divmod_u16u16u16u16_u() {
+    SCF
+    RL E
+    RL D
+    RL L
+    RL H
+
+    LD A,L
+    SUB C
+    LD L,A
+    LD A,H
+    SBC A,B
+    LD H,A
+    RET NC
+
+    ADD HL,BC
+    DEC E
+    RET
+}
+
+#else
+
+#warn No implementation of 16-bit division for this target
+
+#endif

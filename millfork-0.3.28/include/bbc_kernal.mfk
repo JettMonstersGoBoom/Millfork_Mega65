@@ -1,0 +1,14 @@
+
+#if not(BBC_MICRO)
+#warn bbc_kernal module should be used only on BBC Micro-compatible targets
+#endif
+
+// OSASCI. Write a character (to screen) from A plus LF if (A)=&0D
+// Input: A = Byte to write.
+asm void putchar(byte register(a) char) @$FFE3 extern
+
+inline void new_line() {
+    putchar(13)
+}
+
+const array __basic_padding = [$EA, $EA]

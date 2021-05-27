@@ -1,0 +1,69 @@
+
+#pragma intel_syntax
+
+inline asm void exit() {
+	? mvi c, 0
+	call 5
+	? ret
+}
+inline asm void putchar (byte e) {
+	? mvi c, 2
+	call 5
+	? ret
+}
+
+inline void new_line() {
+	putchar(13)
+	putchar(10)
+}
+
+inline asm byte getchar() {
+	? mvi c, 1
+	call 5	
+	? ret
+}
+
+#if 0
+inline asm void putstr_cpm(pointer de) {
+	? mvi c, 9
+	call 5	
+	? ret
+}
+#endif
+
+inline asm byte readychar() {
+	? mvi c, 11
+	call 5
+	? ret
+}
+
+inline asm word cpm_version() {
+	? mvi c, 12
+	call 5
+	? ret
+}
+inline asm void reset_disk_system() {
+	? mvi c, 13
+	call 5
+	? ret
+}
+inline asm byte current_disk() {
+	? mvi c,25
+	call 5
+	? ret
+}
+
+#if 0
+inline asm word console_mode(word de) {
+	? mvi c, 109
+	call 5	
+	? ret
+}
+inline word get_console_mode() {
+	return console_mode($ffff)
+}
+inline asm void set_console_mode(word de) {
+	console_mode(mode)
+}
+#endif
+

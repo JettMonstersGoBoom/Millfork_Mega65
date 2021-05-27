@@ -1,0 +1,78 @@
+
+#if not(MEGA_65) 
+#warn m65_vic module should be only used on MEGA_65-compatible targets
+#endif
+
+byte vic4_key 							@$D02F 
+
+byte vic4_ctrlA							@$d030 
+
+const byte CRAM2K			= 1<<0 
+const byte EXTSYNC		= 1<<1 
+const byte PAL				= 1<<2 
+const byte ROM8				= 1<<3 
+const byte ROMA				= 1<<4 
+const byte ROMC				= 1<<5 
+const byte CROM9			= 1<<6
+const byte ROME				= 1<<7
+
+byte vic4_ctrlB							@$d031 
+const byte INT				= 1<<0 
+const byte MONO				= 1<<1 
+const byte H1280			= 1<<2 
+const byte V400				= 1<<3 
+const byte BPM				= 1<<4 
+const byte ATTR				= 1<<5 
+const byte FAST				= 1<<6
+const byte H640				= 1<<7
+
+word vic4_top_border_pos 		@$d048
+word vic4_bottom_border_pos @$d04a
+word vic4_text_xpos 				@$d04c
+word vic4_text_ypos 				@$d04e
+word vic4_xpos 							@$d050
+word vic4_fine_raster 			@$d052
+byte vic4_mode 							@$d054
+const byte ALPHA		= %10000000
+const byte VFAST		= %01000000
+const byte PALEMU	= %00100000
+const byte SPR640	= %00010000
+const byte SMTH		= %00001000
+const byte FCLRHI	= %00000100
+const byte FCLRLO	= %00000010
+const byte CHR16		= %00000001
+
+
+word vic4_charstep 					@$D058
+byte vic4_charscale_x 			@$D05a
+byte vic4_charscale_y 			@$D05b
+word vic4_charcount 				@$D05e
+long vic4_screen_ptr 				@$D060
+word vic4_color_ptr 				@$D064
+int24 vic4_char_ptr 				@$D068
+byte vic4_palette_select 		@$D070
+byte vic4_bp16_ens 					@$D071
+array(byte) vic4_red_channel[256] @$d100
+array(byte) vic4_green_channel[256] @$d200
+array(byte) vic4_blue_channel[256] @$d300
+
+
+const byte PALETTE_MAPPED0 		= %00000000
+const byte PALETTE_MAPPED1 		= %01000000
+const byte PALETTE_MAPPED2 		= %10000000
+const byte PALETTE_MAPPED3 		= %11000000
+const byte PALETTE_BITMAP0 		= %00000000
+const byte PALETTE_BITMAP1 		= %00010000
+const byte PALETTE_BITMAP2 		= %00100000
+const byte PALETTE_BITMAP3 		= %00110000
+const byte PALETTE_SPRITE0 		= %00000000
+const byte PALETTE_SPRITE1 		= %00000100
+const byte PALETTE_SPRITE2 		= %00001000
+const byte PALETTE_SPRITE3 		= %00001100
+const byte PALETTE_ALTERNATE0 = %00000000
+const byte PALETTE_ALTERNATE1 = %00000001
+const byte PALETTE_ALTERNATE2 = %00000010
+const byte PALETTE_ALTERNATE3 = %00000011
+
+
+

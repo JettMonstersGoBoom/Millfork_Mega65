@@ -1,0 +1,18 @@
+
+#if not(ATARI_8)
+#warn a8_kernel module should be used only on Atari computer-compatible targets
+#endif
+
+noinline asm void putchar(byte register(a) char) {
+    ? tax
+    lda $347
+    pha
+    lda $346
+    pha
+    ? txa
+    rts
+}
+
+inline void new_line() {
+    putchar($9b)
+}

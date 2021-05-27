@@ -1,0 +1,3 @@
+#warn Module x_coord is deprecated, use coord
+
+import coord
