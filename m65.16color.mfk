@@ -54,7 +54,7 @@ void main() {
 	}
 
 	vic_border = 0
-
+	vic_bg_color0 =0 
 	while true {
 		//	mix asm wherever you like
 		asm 

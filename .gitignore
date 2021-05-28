@@ -1,7 +1,7 @@
-bin/16color.asm
-bin/dmatest.asm
-bin/dmatest.lbl
-bin/16color.lbl
-bin/16color.prg
-bin/16color.x.prg
-bin/dmatest.prg
+bin/*.asm
+bin/*.lbl
+bin/*.chrs
+bin/*.clut
+bin/*.info
+bin/*.map
+bt.bat

@@ -1,0 +1,234 @@
+
+import stdio
+import m65.dma 
+
+const byte SCREEN_WIDTH=80
+
+const word SCREEN_SIZE=(SCREEN_WIDTH*25)
+const int24 SCREEN_BASE = $0800
+const int24 COLOR_BASE = $80000
+
+const word GOTO_X = $10
+const word TRANSPARENT = $80
+const word RRB_GOTO_X_CTRL = GOTO_X | TRANSPARENT 
+const word RRB_GOTO_X_ALT = GOTO_X | TRANSPARENT | $6000
+
+struct RRB_ObjDef {
+	int24 screen_ram_source
+	int24 color_ram_source
+	byte width
+	byte height
+}
+
+struct RRB_Object {
+	word xpos 
+	byte ypos 
+	byte vramlocation
+	pointer.RRB_ObjDef object
+}
+
+RRB_ObjDef ship=RRB_ObjDef(ship_mapdata.addr,ship_atrdata.addr,16,12)
+
+array(RRB_Object) Objects = [
+	RRB_Object(0,0,40,ship.addr),
+	RRB_Object(0,0,58,ship.addr)
+]
+
+void RRB_dma_gotox(word value,byte vramoffset)
+{	
+	//	draw control data in screen ram 
+	DMAJob.dst_skip_lsb = SCREEN_WIDTH
+	DMAJob.dst_bank = $00	
+	DMAJob.destination = SCREEN_BASE
+	DMAJob.destination+=vramoffset
+	DMA_word(value)
+	//	draw gotoX strip
+	DMAJob.dst_bank = $ff	
+	DMAJob.destination = COLOR_BASE
+	DMAJob.destination+=vramoffset
+	DMA_word(RRB_GOTO_X_ALT)
+}
+
+void RRB_dma_object(pointer.RRB_ObjDef object,byte vramoffset)
+{
+	DMAJob.dst_bank = $00	
+	DMAJob.scr_skip_lsb = 1
+	DMAJob.dst_skip_lsb = 1
+
+	DMAJob.source=object->screen_ram_source
+	DMAJob.destination = SCREEN_BASE
+	DMAJob.destination+=vramoffset
+	DMAJob.type = DMA_COPY
+	DMA_box(object->width,object->height,object->width)
+
+	//	draw color and attributes
+	DMAJob.dst_bank = $ff	
+	DMAJob.destination = COLOR_BASE
+	DMAJob.destination+=vramoffset
+	DMAJob.source=object->color_ram_source
+	DMA_box(object->width,object->height,0)
+}
+
+void main() {
+	byte ticker
+	byte y
+	byte vramoffset
+	word curve
+	byte ypos,old_ypos
+
+	asm {
+		sei
+	}
+	M65_40hz()
+	M65_defaultmem()
+	M65_VIC4Enable()
+	M65_disable_rom()
+	M65_dma_prepare()
+
+
+	ypos = 0
+	old_ypos = $ff
+	//	for 80 col mode
+
+	vic4_ctrlB = 0 
+	vic4_ctrlB &= INT | MONO | H1280 | V400 | BPM | ATTR | FAST
+	vic4_mode = FCLRHI | FCLRLO | CHR16 
+
+	vic4_charstep = SCREEN_WIDTH 	
+	vic4_charcount = SCREEN_WIDTH>>1
+	vic4_screen_ptr = SCREEN_BASE
+
+	//	prepare to DMA 
+	DMAJob.type = DMA_COPY
+	DMAJob.scr_skip_lsb = 1
+	DMAJob.dst_skip_lsb = 1
+
+	//	copy colors
+	DMAJob.dst_bank = $ff	//	for color ram
+	DMAJob.source=colordata.addr
+	DMAJob.destination = COLOR_BASE
+	DMA_box(40,25,40)
+	//	copy screen 
+	DMAJob.dst_bank = $00	
+	DMAJob.source=mapdata.addr
+	DMAJob.destination = SCREEN_BASE
+	DMA_box(40,25,40)
+
+	//	clear rest
+	DMAJob.dst_skip_lsb = SCREEN_WIDTH
+	DMAJob.dst_bank = $ff	//	for color ram
+	DMAJob.destination = COLOR_BASE+40
+	for y,0,until,20 {
+		DMA_word($0f08)
+	}
+	//	clear screen
+	DMAJob.dst_bank = $00
+	DMAJob.destination = SCREEN_BASE+40
+	for y,0,until,20 {
+		DMA_word($17f)
+	}
+	//	select alt palette and upload
+	vic4_palette_select = PALETTE_MAPPED1 | PALETTE_BITMAP0 | PALETTE_ALTERNATE1
+	for ticker,0,until,255 {
+		vic4_red_channel[ticker] = ship_clutdata[ticker]
+		vic4_green_channel[ticker] = ship_clutdata[ticker+256]
+		vic4_blue_channel[ticker] = ship_clutdata[ticker+512]
+	}
+	//	select normal palette and upload
+	vic4_palette_select = PALETTE_MAPPED0 | PALETTE_BITMAP0 | PALETTE_ALTERNATE1
+	for ticker,0,until,255 {
+		vic4_red_channel[ticker] = clutdata[ticker]
+		vic4_green_channel[ticker] = clutdata[ticker+256]
+		vic4_blue_channel[ticker] = clutdata[ticker+512]
+	}
+
+	//	start the vram location at 40 
+	vramoffset = 40
+	RRB_dma_gotox(0,vramoffset)
+	vramoffset+=2
+	vramoffset+=ship.width
+
+	RRB_dma_gotox(128,vramoffset)
+	vramoffset+=2
+	vramoffset+=ship.width
+
+	//	endcap
+	RRB_dma_gotox(320,vramoffset)
+
+	vic_border = 0
+	vic_bg_color0 =16
+	while true {
+		//	mix asm wherever you like
+		asm 
+		{
+vbl:
+			//	show raster pos as colors
+			ldx $d012
+//			clc 
+//			txa
+//			adc ticker
+//			sta $d100 
+//			sta $d200 
+//			sta $d300
+			cpx #$c0
+			bne vbl
+vbl2:
+			lda $d012 
+			cmp #$c1 
+			bne vbl2
+		}
+		vic4_red_channel[0]=$fe
+		vic4_green_channel[0]=$fe
+		vic4_blue_channel[0]=$fe
+		//	prepare to DMA the strip for x pos
+		DMAJob.dst_skip_lsb = SCREEN_WIDTH
+		DMAJob.dst_bank = $00	
+		DMAJob.destination = SCREEN_BASE
+		DMAJob.destination+=40
+		curve = sinTable[ticker]
+		curve+=160-64
+		curve&=$3ff
+//		curve.hi|=(7-(ticker&7))<<5
+		//	dma the xposition and y offset
+		DMA_word(curve)
+		//	should only do this when needed
+		RRB_dma_object(ship.pointer,42)
+		vic4_red_channel[0]=$0
+		vic4_green_channel[0]=$fe
+		vic4_blue_channel[0]=$fe
+
+		//	same for other object
+		DMAJob.dst_skip_lsb = SCREEN_WIDTH
+		DMAJob.dst_bank = $00	
+		DMAJob.destination = SCREEN_BASE
+		DMAJob.destination+=58
+		curve = sinTable[(64+ticker)&$ff]
+		curve+=160-64
+		curve&=$3ff
+		//	dma the xposition and y offset
+		DMA_word(curve)
+		//	should only do this when needed
+		RRB_dma_object(ship.pointer,60)
+
+		vic4_red_channel[0]=$0
+		vic4_green_channel[0]=$0
+		vic4_blue_channel[0]=$0
+
+		ticker+=1
+	}
+}
+
+const array(sbyte) sinTable= for i,0,to,256 [sin(i,127)]
+
+const array clutdata=file("bin/ddp.clut")
+const array colordata=file("bin/ddp.atr")
+const array mapdata=file("bin/ddp.map")
+
+const array ship_mapdata=file("bin/ship.map")
+const array ship_atrdata=file("bin/ship.atr")
+const array ship_clutdata=file("bin/ship.clut")
+
+const array chrdata @$8000=file("bin/ddp.chrs")
+const array clearchar @$5fc0=for i,0,to,65 [0]
+const array ship_chrdata @$6000=file("bin/ship.chrs")
+

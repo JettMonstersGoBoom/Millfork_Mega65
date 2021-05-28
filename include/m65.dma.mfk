@@ -74,3 +74,32 @@ macro asm void M65_dma_kick()
 	lda #<DMAJob.addr 
 	sta M64_dma_lsb
 }
+//	dma a word value 
+//	can be any size of word stream
+void DMA_word(word xpos)
+{
+	DMAJob.source.lo = xpos.lo
+	DMAJob.size = 25
+	DMAJob.type = DMA_FILL
+	M65_dma_kick()
+	DMAJob.source.lo = xpos.hi
+	DMAJob.destination+=1
+	M65_dma_kick()
+	DMAJob.destination+=1
+}
+//	draw a box 
+//	--------
+//  |       |
+//	--------
+
+void DMA_box(byte width,byte height,word stride)
+{
+byte y
+	DMAJob.size = width
+	for y,0,until,height 
+	{
+		M65_dma_kick()
+		DMAJob.source+=stride
+		DMAJob.destination+=SCREEN_WIDTH
+	}
+}
