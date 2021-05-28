@@ -13,6 +13,9 @@ const word TRANSPARENT = $80
 const word RRB_GOTO_X_CTRL = GOTO_X | TRANSPARENT 
 const word RRB_GOTO_X_ALT = GOTO_X | TRANSPARENT | $6000
 
+//	define a visual object structure
+//	this is the object we draw 
+
 struct RRB_ObjDef {
 	int24 screen_ram_source
 	int24 color_ram_source
@@ -20,6 +23,8 @@ struct RRB_ObjDef {
 	byte height
 }
 
+//	define an RRB object
+//	this is the vram location, screen X & Y and the object to render
 struct RRB_Object {
 	word xpos 
 	byte ypos 
@@ -27,12 +32,17 @@ struct RRB_Object {
 	pointer.RRB_ObjDef object
 }
 
+//	define one visual object
+//	16 tiles wide, 12 high 
 RRB_ObjDef ship=RRB_ObjDef(ship_mapdata.addr,ship_atrdata.addr,16,12)
 
+//	define two RRB objects
 array(RRB_Object) Objects = [
 	RRB_Object(0,0,40,ship.addr),
 	RRB_Object(0,0,58,ship.addr)
 ]
+
+//	DMA the control words into screen at vramoffset
 
 void RRB_dma_gotox(word value,byte vramoffset)
 {	
@@ -49,6 +59,8 @@ void RRB_dma_gotox(word value,byte vramoffset)
 	DMA_word(RRB_GOTO_X_ALT)
 }
 
+//	DMA the visual object 
+//	both screen ram and color ram 
 void RRB_dma_object(pointer.RRB_ObjDef object,byte vramoffset)
 {
 	DMAJob.dst_bank = $00	
@@ -62,12 +74,17 @@ void RRB_dma_object(pointer.RRB_ObjDef object,byte vramoffset)
 	DMA_box(object->width,object->height,object->width)
 
 	//	draw color and attributes
+	//	note color ram doesn't have a second stride value 
+	//	the color and flip are repeated down the height of the object
+
 	DMAJob.dst_bank = $ff	
 	DMAJob.destination = COLOR_BASE
 	DMAJob.destination+=vramoffset
 	DMAJob.source=object->color_ram_source
 	DMA_box(object->width,object->height,0)
 }
+
+//	demo demo demo
 
 void main() {
 	byte ticker
@@ -88,14 +105,17 @@ void main() {
 
 	ypos = 0
 	old_ypos = $ff
-	//	for 80 col mode
 
+	//	set video mode
 	vic4_ctrlB = 0 
 	vic4_ctrlB &= INT | MONO | H1280 | V400 | BPM | ATTR | FAST
+	//	16 color modes
 	vic4_mode = FCLRHI | FCLRLO | CHR16 
 
+	//	set charstep and char count 
 	vic4_charstep = SCREEN_WIDTH 	
 	vic4_charcount = SCREEN_WIDTH>>1
+	//	point to screen base 
 	vic4_screen_ptr = SCREEN_BASE
 
 	//	prepare to DMA 
@@ -103,6 +123,7 @@ void main() {
 	DMAJob.scr_skip_lsb = 1
 	DMAJob.dst_skip_lsb = 1
 
+	//	copying the main background picture 
 	//	copy colors
 	DMAJob.dst_bank = $ff	//	for color ram
 	DMAJob.source=colordata.addr
@@ -114,6 +135,7 @@ void main() {
 	DMAJob.destination = SCREEN_BASE
 	DMA_box(40,25,40)
 
+	//	fill the rest of the screen with blank char and 4bpp info data
 	//	clear rest
 	DMAJob.dst_skip_lsb = SCREEN_WIDTH
 	DMAJob.dst_bank = $ff	//	for color ram
@@ -127,6 +149,8 @@ void main() {
 	for y,0,until,20 {
 		DMA_word($17f)
 	}
+
+	//	upload colors
 	//	select alt palette and upload
 	vic4_palette_select = PALETTE_MAPPED1 | PALETTE_BITMAP0 | PALETTE_ALTERNATE1
 	for ticker,0,until,255 {
