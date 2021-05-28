@@ -27,20 +27,31 @@ mega.rrb.mfk DMA 16 color mode and working RRB objects
 tools\bmp2m65 added as a stand alone tool to convert bmp to m65 format tiles and rrb strips
 
 -b 8000 
+
 sets base tile address to $8000 
 
+
 -o basename 
+
 output is 
+
 basename.chrs 
+
 basename.clut 
+
 basename.map 
+
 basename.atr
 
+
 -m 
+
 output a traditional tilemap 16x8 pixels 
 
 -r 
+
 output an RRB object, which is split into 16 pixel * height strips
+
 
 plus 2 blank tiles above and below the image for RRB Y offset 
 
