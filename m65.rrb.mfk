@@ -35,11 +35,14 @@ struct RRB_Object {
 //	define one visual object
 //	16 tiles wide, 12 high 
 RRB_ObjDef ship=RRB_ObjDef(ship_mapdata.addr,ship_atrdata.addr,16,12)
+RRB_ObjDef ship2=RRB_ObjDef(ship2_mapdata.addr,ship2_atrdata.addr,16,10)
 
 //	define two RRB objects
+//	VRam location is by hand currently
+//	easy to add code for that 
 array(RRB_Object) Objects = [
 	RRB_Object(0,0,40,ship.addr),
-	RRB_Object(0,0,58,ship.addr)
+	RRB_Object(0,0,58,ship2.addr)
 ]
 
 //	DMA the control words into screen at vramoffset
@@ -167,14 +170,14 @@ void main() {
 	}
 
 	//	start the vram location at 40 
-	vramoffset = 40
+	vramoffset = Objects[0].vramlocation
 	RRB_dma_gotox(0,vramoffset)
 	vramoffset+=2
-	vramoffset+=ship.width
-
+	vramoffset+=Objects[0].object->width
+	//	set to 128 xpos 
 	RRB_dma_gotox(128,vramoffset)
 	vramoffset+=2
-	vramoffset+=ship.width
+	vramoffset+=Objects[1].object->width
 
 	//	endcap
 	RRB_dma_gotox(320,vramoffset)
@@ -208,7 +211,7 @@ vbl2:
 		DMAJob.dst_skip_lsb = SCREEN_WIDTH
 		DMAJob.dst_bank = $00	
 		DMAJob.destination = SCREEN_BASE
-		DMAJob.destination+=40
+		DMAJob.destination+=Objects[0].vramlocation
 		curve = sinTable[ticker]
 		curve+=160-64
 		curve&=$3ff
@@ -216,7 +219,7 @@ vbl2:
 		//	dma the xposition and y offset
 		DMA_word(curve)
 		//	should only do this when needed
-		RRB_dma_object(ship.pointer,42)
+		RRB_dma_object(Objects[0].object,Objects[0].vramlocation+2)
 		vic4_red_channel[0]=$0
 		vic4_green_channel[0]=$fe
 		vic4_blue_channel[0]=$fe
@@ -225,14 +228,14 @@ vbl2:
 		DMAJob.dst_skip_lsb = SCREEN_WIDTH
 		DMAJob.dst_bank = $00	
 		DMAJob.destination = SCREEN_BASE
-		DMAJob.destination+=58
+		DMAJob.destination+=Objects[1].vramlocation
 		curve = sinTable[(64+ticker)&$ff]
 		curve+=160-64
 		curve&=$3ff
 		//	dma the xposition and y offset
 		DMA_word(curve)
 		//	should only do this when needed
-		RRB_dma_object(ship.pointer,60)
+		RRB_dma_object(Objects[1].object,Objects[1].vramlocation+2)
 
 		vic4_red_channel[0]=$0
 		vic4_green_channel[0]=$0
@@ -251,6 +254,9 @@ const array mapdata=file("bin/ddp.map")
 const array ship_mapdata=file("bin/ship.map")
 const array ship_atrdata=file("bin/ship.atr")
 const array ship_clutdata=file("bin/ship.clut")
+
+const array ship2_mapdata=file("bin/ship_1.map")
+const array ship2_atrdata=file("bin/ship_1.atr")
 
 const array chrdata @$8000=file("bin/ddp.chrs")
 const array clearchar @$5fc0=for i,0,to,65 [0]

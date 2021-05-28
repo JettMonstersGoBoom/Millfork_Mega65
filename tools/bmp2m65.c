@@ -12,7 +12,8 @@
 
 
 FILE *chrs_fp,*map_fp,*atr_fp;
-int tile_offset = 0;
+uint16_t tile_offset = 0;
+uint32_t vram_location = 0;
 
 typedef struct
 {
@@ -140,6 +141,7 @@ typedef struct
 	int				height;
 	uint32_t 	crc;
 	int 			xflip;
+	uint32_t	vram_location;
 	uint8_t 	*bytes;
 } TILE;
 
@@ -185,47 +187,46 @@ int px,py;
 	tile->xflip = 0;
 	for (uint16_t q=0;q<ret;q++)
 	{
-		if (tiles[q]->crc==tile->crc)
+		int differ = 0;
+		for (py=0;py<tiles[q]->height;py++)
 		{
-			int differ = 0;
+			for (px=0;px<TILE_W;px++)
+			{
+				if (tile->bytes[px+(py*TILE_W)]!=tiles[q]->bytes[px+(py*TILE_W)])
+					differ+=1;
+			}
+		}
+
+		if (differ!=0)
+		{
+
+			differ = 0;
 			for (py=0;py<tiles[q]->height;py++)
 			{
 				for (px=0;px<TILE_W;px++)
 				{
-					if (tile->bytes[px+(py*TILE_W)]!=tiles[q]->bytes[px+(py*TILE_W)])
+					if (tile->bytes[px+(py*TILE_W)]!=tiles[q]->bytes[TILE_W-1-px+(py*TILE_W)])
 						differ+=1;
 				}
 			}
-
-			if (differ!=0)
-			{
-
-				differ = 0;
-				for (py=0;py<tiles[q]->height;py++)
-				{
-					for (px=0;px<TILE_W;px++)
-					{
-						if (tile->bytes[px+(py*TILE_W)]!=tiles[q]->bytes[TILE_W-1-px+(py*TILE_W)])
-							differ+=1;
-					}
-				}
-				if (differ==0)
-				{
-					tile->xflip = 1;
-				}
-			}
 			if (differ==0)
-				return q;
-
+			{
+				tile->xflip = 1;
+			}
 		}
+		if (differ==0)
+			return q;
 	}
 	TILE *copy = dmt_malloc(sizeof(TILE));
+	copy->vram_location = vram_location;
 	copy->crc = tile->crc;
 	copy->xflip = tile->xflip;
 	copy->bytes = dmt_malloc(TILE_W*tile->height);
 	copy->height = tile->height;
 	memcpy(copy->bytes,tile->bytes,TILE_W*tile->height);
 	sb_push(tiles,copy);
+
+	vram_location+=tile->height/TILE_H;
 
 	return ret;
 }
@@ -260,8 +261,9 @@ uint16_t atr[20];
 			}
 //			printf("\n");
 		}
-		map[x] = check_repeats(&tile) * (mh+2);
-		map[x]+=tile_offset;
+		uint16_t id = check_repeats(&tile);
+
+		map[x]=tiles[id]->vram_location;
 //		uint16_t ti = check_repeats(&tile) * (mh+2);
 //		fwrite(&ti,sizeof(uint16_t),1,map_fp);
 		atr[x] = 0x0f08;
@@ -381,6 +383,7 @@ int main(int argc,char *argv[])
 	char filename[256];
 	void (*data_type)() = create_map; 
 	index = 0;
+	vram_location = 0;
 	for(i=1;i<argc;i++)
 	{
 		char *isBmp=strstr(argv[i],".bmp");
@@ -396,6 +399,20 @@ int main(int argc,char *argv[])
 					map_fp = fopen(filename,"wb");
 					sprintf(filename,"%s.atr",outname);
 					atr_fp = fopen(filename,"wb");
+					//	palette is input first image					
+					sprintf(filename,"%s.clut",outname);
+					FILE *fp = fopen(filename,"wb");
+					for (int ch=0;ch<3;ch++)
+					{
+						for (int q=0;q<256;q++)
+						{
+							uint8_t b= SWAP_UINT8(bmp_palette[q][ch]);
+							fwrite(&b,1,1,fp);
+						}
+					}
+
+					fclose(fp);
+
 				}
 				else 
 				{
@@ -422,6 +439,8 @@ int main(int argc,char *argv[])
 			{
 				int addr = strtol(argv[i+1],NULL,16);
 				tile_offset = addr/64;
+				vram_location = tile_offset;
+
 				log("address %d offset %x",addr,tile_offset);
 				i+=1;
 			}
@@ -470,19 +489,6 @@ int main(int argc,char *argv[])
 		}
 	}
 	fclose(chrs_fp);
-
-	sprintf(filename,"%s.clut",outname);
-	FILE *fp = fopen(filename,"wb");
-	for (int ch=0;ch<3;ch++)
-	{
-		for (int q=0;q<256;q++)
-		{
-			uint8_t b= SWAP_UINT8(bmp_palette[q][ch]);
-			fwrite(&b,1,1,fp);
-		}
-	}
-
-	fclose(fp);
 
 	//	free
 	for (int q=0;q<sb_count(tiles);q++)
