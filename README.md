@@ -53,7 +53,7 @@ output a traditional tilemap 16x8 pixels
 output an RRB object, which is split into 16 pixel * height strips
 
 
-plus 2 blank tiles above and below the image for RRB Y offset 
+plus 1 blank tile above and 1 below the image for RRB Y offset 
 
 # extras
 
