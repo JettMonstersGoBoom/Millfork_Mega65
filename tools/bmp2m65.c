@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
@@ -180,7 +181,7 @@ void get_tile_4bpp(int x,int y,int *clut,TILE *tile)
 	}
 }
 
-int check_repeats(TILE *tile)
+int check_repeats(TILE *tile,bool checkflip)
 {
 int px,py;
 	uint16_t ret=sb_count(tiles);
@@ -197,9 +198,9 @@ int px,py;
 			}
 		}
 
-		if (differ!=0)
-		{
 
+		if ((differ!=0) && (checkflip==true))
+		{
 			differ = 0;
 			for (py=0;py<tiles[q]->height;py++)
 			{
@@ -214,9 +215,13 @@ int px,py;
 				tile->xflip = 1;
 			}
 		}
+
 		if (differ==0)
 			return q;
+
 	}
+
+
 	TILE *copy = dmt_malloc(sizeof(TILE));
 	copy->vram_location = vram_location;
 	copy->crc = tile->crc;
@@ -261,7 +266,7 @@ uint16_t atr[20];
 			}
 //			printf("\n");
 		}
-		uint16_t id = check_repeats(&tile);
+		uint16_t id = check_repeats(&tile,true);
 
 		map[x]=tiles[id]->vram_location;
 //		uint16_t ti = check_repeats(&tile) * (mh+2);
@@ -288,36 +293,44 @@ uint16_t atr[20];
 
 	dmt_free(tile.bytes);
 
-#if 0
-		TILE tile;
-		memset(tile.bytes,0,sizeof(tile.bytes));
-
-		TILE *copy = dmt_malloc(sizeof(TILE));
-		memcpy(copy,&tile,sizeof(TILE));
-		sb_push(tiles,copy);
-
-		for (y=0;y<mh;y++)
-		{
-			int clut;
-			it = x+(y*mw);
-			get_tile_4bpp(x*TILE_W,y*TILE_H,&clut,&tile);
-
-			copy = dmt_malloc(sizeof(TILE));
-			memcpy(copy,&tile,sizeof(TILE));
-			sb_push(tiles,copy);
-
-			log("%x",tile.crc);
-		}
-
-		memset(tile.bytes,0,sizeof(tile.bytes));
-		copy = dmt_malloc(sizeof(TILE));
-		memcpy(copy,&tile,sizeof(TILE));
-		sb_push(tiles,copy);
-
-	}
-#endif	
 }
 
+
+//	same as RRB minus the padding
+
+void create_sprite()
+{
+int mw,mh,x,y,px,it,clut;
+TILE tile;
+uint16_t map[20];
+uint16_t atr[20];
+	mw = bmp_width/TILE_W;
+	mh = bmp_height/TILE_H;
+	tile.height = bmp_height;
+	tile.bytes = dmt_malloc(TILE_W*tile.height);
+	memset(tile.bytes,0,TILE_W*tile.height);
+	for (x=0;x<mw;x++)
+	{
+		clut = 0;
+		tile.crc = 0;
+		for (y=0;y<bmp_height;y++)
+		{
+			for (px=0;px<TILE_W;px++)
+			{
+				uint8_t pix = get_pixel((x*TILE_W)+px,y);
+				tile.crc^=pix;
+				tile.bytes[px+(y*TILE_W)] = pix&0xf;
+//				printf("%02X",pix&0xf);
+			}
+//			printf("\n");
+		}
+		uint16_t id = check_repeats(&tile,false);
+//		map[x]=tiles[id]->vram_location;
+	}
+
+	dmt_free(tile.bytes);
+
+}
 void create_map()
 {
 int mw,mh;
@@ -342,7 +355,7 @@ TILE tile;
 			it = x+(y*mw);
 			get_tile_4bpp(x*TILE_W,y*TILE_H,&clut,&tile);
 			tile.height = TILE_H;
-			tile_map[it].index=check_repeats(&tile);
+			tile_map[it].index=check_repeats(&tile,true);
 			tile_map[it].clut = clut;
 			tile_map[it].xflip = tile.xflip;
 		}
@@ -378,6 +391,7 @@ TILE tile;
 int main(int argc,char *argv[])
 {
 	int i,index;
+	int nyb_swap = 0;
 	tiles = NULL;
 	char outname[256];
 	char filename[256];
@@ -447,14 +461,24 @@ int main(int argc,char *argv[])
 			if (*o=='m')
 			{
 				log("map mode");
+				nyb_swap = 0;
 				data_type = create_map;
 			}
 
 			if (*o=='r')
 			{
 				log("rrb mode");
+				nyb_swap = 0;
 				data_type = create_rrb;
 			}
+
+			if (*o=='s')
+			{
+				log("sprite mode");
+				nyb_swap = 1;
+				data_type = create_sprite;
+			}
+
 			if (*o=='o')
 			{
 				log("%s",argv[i+1]);
@@ -483,7 +507,16 @@ int main(int argc,char *argv[])
 			for (int px=0;px<TILE_W;px+=2)
 			{
 				uint8_t b = tiles[q]->bytes[px+(py*TILE_W)];
-				b|=tiles[q]->bytes[(1+px)+(py*TILE_W)]<<4;
+				if (nyb_swap==0)
+				{
+					b|=tiles[q]->bytes[(1+px)+(py*TILE_W)]<<4;
+				}
+				else 
+				{
+					b = b << 4;
+					b|=tiles[q]->bytes[(1+px)+(py*TILE_W)];
+				}
+
 				fwrite(&b,1,1,chrs_fp);
 			}
 		}

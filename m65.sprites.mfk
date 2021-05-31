@@ -1,0 +1,167 @@
+
+import stdio
+import m65.dma 
+import m65.keyboard 
+import m65.vic4 
+
+const byte SCREEN_WIDTH=80
+const word SCREEN_SIZE=(SCREEN_WIDTH*25)
+const int24 SCREEN_BASE = $0800
+const int24 SPRITE_POINTERS = $8007f0
+
+array(word) sprite_pointers[8] @$7f0
+
+void main() {
+	byte ticker
+	byte selected 
+	asm {
+		sei
+	}
+
+	selected = 0 	
+	M65_40hz()
+	M65_defaultmem()
+	M65_VIC4Enable()
+	M65_disable_rom()
+	M65_dma_prepare()
+
+
+	vic4_sprite_ptr = SPRITE_POINTERS
+	//	for 80 col mode
+	vic4_charstep = SCREEN_WIDTH 	
+	vic4_charcount = SCREEN_WIDTH
+	vic4_screen_ptr = SCREEN_BASE
+
+	//	set border to index 0 
+	vic_border = 0
+	vic_bg_color0 = 0
+
+	vic_spr_ena = $ff
+	vic4_spr16_ena = $ff
+	vic4_spr_height_ena = $ff 
+	vic4_spr_height = 200
+	vic4_spr_x64=$ff
+	vic_spr_dp=$ff
+	vic4_spry_adjust = 0
+	for ticker,0,until,8 
+	{
+		vic_spr_coord[ticker<<1] = 50 + (ticker*16)
+		vic_spr_coord[1+(ticker<<1)] = 26
+		sprite_pointers[ticker] = $100 + (ticker*25)
+		vic_spr_color[ticker]=0
+	}
+
+//	select last 2 sprites to be extended across screen 
+	asm 
+	{
+		lda $d04f
+		and #$f
+		ora #%11100000
+		sta $d04f 
+		lda #$00 
+		sta vic_spr7_x
+	}
+
+
+
+	vic4_palette_select = PALETTE_MAPPED1 | PALETTE_BITMAP0 | PALETTE_ALTERNATE0 | PALETTE_SPRITE1
+	for ticker,0,until,255 {
+		vic4_red_channel[ticker] = ship_clutdata[ticker&$f]
+		vic4_green_channel[ticker] = ship_clutdata[(ticker&$f)+256]
+		vic4_blue_channel[ticker] = ship_clutdata[(ticker&$f)+512]
+	}
+
+
+
+	while true {
+
+		asm 
+		{
+vbl:
+			//	show raster pos as colors
+			ldx $d012
+//			clc 
+//			txa
+//			adc ticker
+//			sta $d100 
+//			sta $d200 
+//			sta $d300
+			cpx #$c0
+			bne vbl
+vbl2:
+			lda $d012 
+			cmp #$c1 
+			bne vbl2
+		}
+		//	q
+		if (m65_ascii==$71)
+		{
+			selected-=1
+			m65_ascii = 0
+		}
+		if (m65_ascii==$77)
+		{
+			selected+=1
+			m65_ascii = 0
+		}
+		selected = selected&7
+		if (m65_ascii==$61)
+		{
+			sprite_pointers[selected]-=1
+			m65_ascii = 0
+		}
+		if (m65_ascii==$7a)
+		{
+			sprite_pointers[selected]+=1
+			m65_ascii = 0
+		}
+
+		if (m65_ascii==$2a)
+		{
+			vic4_spry_adjust+=1
+			m65_ascii = 0
+		}
+		if (m65_ascii==$40)
+		{
+			vic4_spry_adjust-=1
+			m65_ascii = 0
+		}
+
+		vic_spr5_x=$8+((ticker<<1)&$f)
+		vic_spr6_x=$8+(ticker&$f)
+		vic_spr7_x=$8+((ticker>>1)&$f)
+		ticker-=1
+		putHexW(0,sprite_pointers[selected])
+		putHex(5,selected)
+	}
+}
+
+const array hello_world=["hello mega65, hope you have some fun !  " scr]
+
+const array hexcodes=["0123456789abcdef" scr]
+
+void putHex(word offset,byte value)
+{
+pointer addr 
+	addr = SCREEN_BASE.loword
+	addr+=offset
+
+	addr[0] = hexcodes[value>>4]
+	addr[1] = hexcodes[value&$f]
+}
+
+void putHexW(word offset,word value)
+{
+pointer addr 
+	addr = SCREEN_BASE.loword
+	addr+=offset
+
+	addr[0] = hexcodes[(value>>12)&$f]
+	addr[1] = hexcodes[(value>>8)&$f]
+	addr[2] = hexcodes[(value>>4)&$f]
+	addr[3] = hexcodes[value&$f]
+}
+
+
+const array ship_clutdata = file("bin/shipsprite.clut")
+const array ship_chrdata @$4000=file("bin/shipsprite.chrs")
