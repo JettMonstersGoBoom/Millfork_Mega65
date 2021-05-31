@@ -20,7 +20,13 @@ mega.16color.mfk uses DMA and sets up 16 color mode
 
 # RRB 
 
+![RRB example](/shots/m65_rrb.png?raw=true)
+
 mega.rrb.mfk DMA 16 color mode and working RRB objects
+
+# IRQ
+
+![IRQ](/shots/m65_irq.png?raw=true)
 
 
 # tools
