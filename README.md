@@ -14,6 +14,7 @@ mega.dmatest.mfk is hello world
 
 # 16 colors
 
+![16 color simple](/shots/m65_16.png?raw=true)
 
 mega.16color.mfk uses DMA and sets up 16 color mode 
 
