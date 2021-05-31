@@ -1,0 +1,94 @@
+
+import stdio
+import m65.dma 
+import m65.keyboard 
+import m65.vic4 
+
+pointer NMI_pointer@$fffa
+pointer IRQ_pointer@$fffe
+
+const byte SCREEN_WIDTH=80
+const word SCREEN_SIZE=(SCREEN_WIDTH*25)
+const int24 SCREEN_BASE = $0800
+
+
+
+interrupt void NMI_nop() {
+}
+
+
+interrupt void IRQ_basic(){
+
+	asm {
+		lda #$ff
+		sta $d100
+		asl $d019
+	}
+	vic_raster = $c0
+	IRQ_pointer = IRQ_bottom.addr 
+}
+
+interrupt void IRQ_bottom(){
+
+	asm {
+		lda #$00 
+		sta $d100
+		asl $d019
+	}
+	IRQ_pointer = IRQ_basic.addr 
+	vic_raster = $50
+}
+
+void main() {
+	byte ticker
+	asm {
+		sei
+	}
+	
+	M65_40hz()
+	M65_defaultmem()
+	M65_VIC4Enable()
+	M65_disable_rom()
+	M65_dma_prepare()
+
+	cia_disable_irq()
+	IRQ_pointer = IRQ_basic.addr 
+	NMI_pointer = NMI_nop.addr
+
+	vic_irq_ena = 1
+	//	set irq position 
+	//	for the 1st call
+	vic_raster = $81
+
+	//	for 80 col mode
+	vic4_charstep = SCREEN_WIDTH 	
+	vic4_charcount = SCREEN_WIDTH
+	vic4_screen_ptr = SCREEN_BASE
+
+	//	set border to index 0 
+	vic_border = 0
+	vic_bg_color0 = 0
+
+	asm {
+		//	acknoledge IRQ and reenable them 
+		asl $d019
+		cli 
+	} 
+
+	while true {
+	}
+}
+
+const array hello_world=["hello mega65, hope you have some fun !  " scr]
+
+const array hexcodes=["0123456789abcdef" scr]
+
+void putHex(word offset,byte value)
+{
+pointer addr 
+	addr = SCREEN_BASE.loword
+	addr+=offset
+
+	addr[0] = hexcodes[value>>4]
+	addr[1] = hexcodes[value&$f]
+}
