@@ -10,6 +10,8 @@ const int24 SCREEN_BASE = $0800
 
 void main() {
 	byte ticker
+	bool crt_enabled
+
 	asm {
 		sei
 	}
@@ -80,6 +82,7 @@ void main() {
 	vic_border = 0
 
 
+
 	while true {
 		//	mix asm wherever you like
 		asm 
@@ -101,9 +104,29 @@ vbl2:
 			bne vbl2
 		}
 
-
 		putHex(320,m65_ascii)
 
+
+		if ((m65_ascii==$9))
+		{
+			vic4_fine_raster_h&=%10111111 
+			vic4_mode&=%11011111
+
+			//	tab 
+			if (crt_enabled==true)
+			{
+					//	enable CRT
+				vic4_mode|=PALEMU
+				vic4_fine_raster_h|=%01000000 
+				crt_enabled=false
+			}
+			else
+			{
+				crt_enabled=true
+			}
+			m65_ascii = 0
+
+		}
 		if ((m65_keymod&KEYMOD_ALT)==0)
 		{
 		//	this just counts up once per frame

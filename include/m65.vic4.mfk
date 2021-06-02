@@ -31,7 +31,6 @@ word vic4_bottom_border_pos @$d04a
 word vic4_text_xpos 				@$d04c
 word vic4_text_ypos 				@$d04e
 word vic4_xpos 							@$d050
-word vic4_fine_raster 			@$d052
 byte vic4_mode 							@$d054
 const byte ALPHA		= %10000000
 const byte VFAST		= %01000000
@@ -42,6 +41,9 @@ const byte FCLRHI	= %00000100
 const byte FCLRLO	= %00000010
 const byte CHR16		= %00000001
 
+
+byte vic4_fine_raster_l			@$D052
+byte vic4_fine_raster_h			@$D053
 
 byte vic4_spr_height_ena 		@$D055
 byte vic4_spr_height				@$D056 
@@ -56,11 +58,12 @@ int24 vic4_char_ptr 				@$D068
 byte vic4_spr16_ena					@$D06B
 int24 vic4_sprite_ptr				@$D06C
 byte vic4_palette_select 		@$D070
+
 byte vic4_bp16_ens 					@$D071
 byte vic4_spry_adjust				@$D072
-array(byte) vic4_red_channel[256] @$d100
-array(byte) vic4_green_channel[256] @$d200
-array(byte) vic4_blue_channel[256] @$d300
+array(byte) vic4_red_channel[256] @$D100
+array(byte) vic4_green_channel[256] @$D200
+array(byte) vic4_blue_channel[256] @$D300
 
 
 const byte PALETTE_MAPPED0 		= %00000000
